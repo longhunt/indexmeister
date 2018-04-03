@@ -1,0 +1,400 @@
+#! /usr/bin/env python2
+
+'''Utility to interactively index Latex books 
+   Copyright 2015-2018 by Kevin A. Straight <longhunt@yahoo.com> under the
+   terms of the GNU public license.'''
+
+import string, subprocess, sys, os
+
+#OpenSUSE and some others do not install the curses library by default
+#so we'd better check that it is there
+try:
+    import curses
+except:
+    print "ERROR: Curses library not found.  Please use your OS's package "
+    print "manager to install it.  On many distros it is called 'python-curses.'"
+
+#get locale info for string encoding
+import locale
+locale.setlocale(locale.LC_ALL, '')
+code = locale.getpreferredencoding()
+    
+    
+
+def cwin_flow(tstring, win):
+    ''' "flows" a text string into a curses window '''
+    
+    rows, cols = win.getmaxyx()
+    
+    tstring = tstring.replace('\n', ' ')
+    tstring = tstring.replace('\r', ' ')
+    tstring = tstring.replace('\t', ' ')
+    if len(tstring) > rows*cols:
+        tstring = tstring[:rows*cols]
+    while len(tstring) < rows*cols:
+        tstring = tstring+' '
+        
+    for i in range(rows-1):
+        win.addstr(i,0,tstring[i*cols:i*cols+cols])
+    
+    
+             
+def main_script(args):
+    stdscr = curses.initscr()
+    rows, cols = stdscr.getmaxyx()
+    
+    header_str = '>>>  INDEXMEISTER v0.33  <<<'
+    stdscr.addstr(0, (cols-len(header_str))/2, header_str, curses.A_BOLD)
+    
+    bwin = curses.newwin(rows-1, cols, 1,0)
+    bwin.bkgd('.', curses.A_REVERSE)
+    bwin.refresh()
+    
+    if not os.path.exists(idx_wrds_path+".bu"):
+        try:
+            subprocess.call("cp "+idx_wrds_path+" "+idx_wrds_path+".bu", 
+                                            shell="True")
+        except:
+            pass
+            
+    with open(idx_wrds_path, 'r') as idx_wrds_file:
+        idx_wrds = idx_wrds_file.readlines()
+        
+    idx_wrds_new = []
+    idx_wrds_later = []
+        
+    for i in range(len(idx_wrds)):
+        w = idx_wrds[i]
+        w_entry = w = w.replace('\n', '')
+        
+        #show surrounding terms at bottom of window
+        nterms = idx_wrds[i-1][:-1]+" -- "+idx_wrds[i][:-1]+" -- "+idx_wrds[i+1][:-1]+" -- "+idx_wrds[i+2][:-1]        
+        #if this display string is too long then create a shorter one
+        if len(nterms) > cols-1:
+            iw1 = idx_wrds[i-1][: min([len(idx_wrds[i-1])-1,cols/4-4])]
+            iw2 = idx_wrds[i][:min([len(idx_wrds[i])-1,cols/4-4])]
+            iw3 = idx_wrds[i+1][:min([len(idx_wrds[i+1])-1,cols/4-4])]
+            iw4 = idx_wrds[i+2][:min([len(idx_wrds[i+2])-1,cols/4-4])]
+            nterms = iw1+" -- "+iw2+" -- "+iw3+" -- "+iw4           
+            stdscr.addstr(rows-1,(cols-len(nterms))/2,nterms)
+            stdscr.addstr(rows-1, (cols-len(nterms))/2+len(iw1)+4, iw2, curses.A_BOLD)
+        else:
+            stdscr.addstr(rows-1,(cols-len(nterms))/2,nterms)
+            stdscr.addstr(rows-1, (cols-len(nterms))/2+string.find(nterms,w), w, curses.A_BOLD)
+        
+        fwin=curses.newwin(6,cols-2,2,1)
+        fwin.addstr(1,2,"Suggested index term: "+w)
+        fwin.addstr(2,2,"Index entry: "+w_entry)
+        fwin.addstr(3,2,"(s)how occurences  (c)hange index entry  (d)elete  s(k)ip\n")      
+        fwin.addstr(4,2,"(b)ack  (i)ndex  (q)uit and save progress  aba(n)don changes\n")
+        curses.curs_set(0)
+        bwin.refresh()
+        fwin.refresh()
+        
+        while 1:
+            c = stdscr.getch()
+            if c == ord('s'):
+                stdscr.addstr('\r')
+                try:
+                    p = subprocess.check_output(["grep -rH --include=\*.tex " 
+                            + w.replace("\n", '') + " ./"], shell=True)
+                            
+                    with open("./tempfile.out", "w") as tf:
+                        tf.write(p)
+                
+                    p_rows = p.split('\n')
+                    
+                    gwin_length = min(rows-9, len(p_rows))
+                    gwin = curses.newwin(gwin_length, cols-2, 8, 1)
+                     
+                    
+                    maxr = min(len(p_rows), gwin_length)
+                    
+                    
+                    for idx in range(maxr):
+                        r = p_rows[idx]
+                        if len(r) > cols-4:
+                            
+                            fname = r[:r.index(':')+1]
+                            gwin.addstr(idx, 1, fname)
+                            snippet = r[r.index(':')+1:]
+                            
+                            i = snippet.index(w)
+                            ww=cols-4-len(fname)-len(w) #distance we have to work with
+                            firstpart = min(i, max(ww/2, ww-(len(snippet)-i-len(w))))
+                            gwin.addstr(snippet[i-firstpart:i])
+                            gwin.addstr(w, curses.A_BOLD)
+                            gwin.addstr(snippet[i+len(w):i+len(w)+ww-firstpart])
+                            
+                        else:
+                            fname = r[:r.index(':')+1]
+                            gwin.addstr(idx, 1, fname)
+                            snippet = r[r.index(':')+1:]
+                            i = snippet.index(w)
+                            gwin.addstr(snippet[:i])
+                            gwin.addstr(w, curses.A_BOLD)
+                            gwin.addstr(snippet[i+len(w):])
+                    
+                        gwin.refresh()    
+                    
+                except:
+                    pass
+                
+                        
+                                        
+            
+            if c == ord('c'):   
+                cwin = curses.newwin(4, cols-2, 8, 1)
+                cwin.addstr(2,2,"New entry: ")
+                cwin.refresh()
+                curses.curs_set(1)        
+                curses.echo()
+                inputstr = ''
+                while c <> '\n':
+                    c = cwin.getkey()
+                    inputstr = inputstr+c
+                w_entry = inputstr.strip()    
+                curses.curs_set(0)
+                curses.noecho()
+                fwin.addstr(2,2,"Index entry: "+w_entry)
+                fwin.clrtoeol()
+                fwin.refresh()
+                
+                                
+            if c == ord('l'):
+                idx_wrds_later.append(w+'\n')
+                break
+            if c == ord('d'):
+                break
+            if c == ord('q'):
+                
+                
+                with open(idx_wrds_path, 'w') as idx_wrds_file:
+                    idx_wrds_file.writelines(idx_wrds_new)
+                    idx_wrds_file.writelines(idx_wrds[idx_wrds.index(w+'\n'):])
+                #with open(os.path.splitext(idx_wrds_path)[0]+".later.txt", 'w') as idx_wrds_file:
+                #    idx_wrds_file.writelines(idx_wrds_later)
+                quit()        
+            if c == ord('k'):  
+                idx_wrds_new.append(w+'\n')
+                bwin.erase()
+                break
+            if c ==ord('b'):
+                i-=1
+                w = idx_wrds[i]
+                w_entry = w = w.replace('\n', '')
+                
+                fwin=curses.newwin(6,cols-2,2,1)
+                fwin.addstr(1,2,"Suggested index term: "+w)
+                fwin.addstr(2,2,"Index entry: "+w_entry)
+                fwin.addstr(3,2,"(s)how occurences  (c)hange index entry  (d)elete  s(k)ip\n")      
+                fwin.addstr(4,2,"(b)ack  (i)ndex  (q)uit and save progress  (a)bandon changes\n")
+                bwin.erase()
+                stdscr.addstr(0,0,str(i+1)+" / "+str(len(idx_wrds))); bwin.refresh()
+                fwin.refresh()
+                        
+            if c == ord('n'):  quit()
+            
+            if c == ord('i'):
+                iwin = curses.newwin(rows-3, cols-2, 2, 1)
+                iwin.addstr(0,0,"Existing Text:",curses.A_BOLD)
+                iwin.addstr(5,0,"Proposed Text:",curses.A_BOLD)
+                iwin.addstr(11,0,"(a)ccept  s(k)ip  (c)hange index entry".center(cols-2))
+                
+                iwin.refresh()
+                
+                ioldwin = curses.newwin(4,cols-2,3,1)
+                ipropwin = curses.newwin(4,cols-2,8,1)
+                
+                #find all the occurences
+                #first find a list of files where they show up
+                try:
+                    tfiles = subprocess.check_output(["grep -rH --include=\*.tex " 
+                            + w.replace("\n", '') + " ./"], shell=True).split('\n')
+                    tfiles = [t for t in tfiles if t <> '']
+                    
+                except:
+                    tfile =[]
+                    
+                for t in tfiles:
+                    with open(t.split(':', 1)[0], 'r') as tf_in:
+                        tf = tf_in.readlines()
+                    
+                    for i in range(len(tf)):
+                        if w in tf[i]:
+                            if i < 2:
+                                snippet = tf[i]+tf[i+1]+tf[i+2]
+                            elif i >= len(tf)-1:
+                                snippet = tf[i-2]+tf[i-1]+tf[i]
+                            else:
+                                snippet = tf[i-1]+tf[i]+tf[i+1]
+                                
+                            cwin_flow(snippet, ioldwin)
+                            
+                            if string.find(snippet[snippet.find(w):snippet.find(w)+len(w)+13], '\ind')<>-1:
+                                tagloc1 = string.find(snippet[string.find(snippet,w):], '\index')+string.find(snippet,w)
+                                tagloc2 = string.find(snippet[tagloc1:], '}')+string.find(snippet,w)+7
+                                exst_tag = snippet[tagloc1:tagloc2]
+                                cwin_flow(snippet.replace(exst_tag,'\index{'+w_entry+'}'), ipropwin)
+                                
+                            else:
+                                cwin_flow(snippet.replace(w, w+'\index{'+w_entry+'}'), ipropwin)
+                            
+                            ioldwin.refresh()
+                            ipropwin.refresh()
+                            
+                            while 1:
+                                c = ioldwin.getch()
+                                
+                                if c == ord('c'):
+                                    cwin = curses.newwin(13, cols-2, 8, 1)
+                                    cwin.addstr(2,2,"New entry: ")
+                                    cwin.refresh()
+                                    curses.curs_set(1)        
+                                    curses.echo()
+                                    inputstr = ''
+                                    while c <> '\n':
+                                        c = cwin.getkey()
+                                        inputstr = inputstr+c
+                                    w_entry = inputstr.strip()    
+                                    curses.curs_set(0)
+                                    curses.noecho()
+                                    fwin.addstr(2,2,"Index entry: "+w_entry)
+                                    fwin.clrtoeol()
+                                    
+                                    bwin.refresh()
+                                    iwin.addstr(11,0,"(a)ccept  s(k)ip  (c)hange index entry".center(cols-2))
+                                    iwin.refresh()
+                                    ioldwin.refresh()
+                                    
+                                    
+                                    ipropwin.erase()
+                                    #check if there is already an index tag
+                                    
+                                    if string.find(snippet[snippet.find(w):snippet.find(w)+len(w)+13], '\ind')<>-1:
+                                        tagloc1 = string.find(snippet[string.find(snippet,w):], '\index')+string.find(snippet,w)
+                                        tagloc2 = string.find(snippet[tagloc1:], '}')+string.find(snippet,w)+7
+                                        exst_tag = snippet[tagloc1:tagloc2]
+                                        cwin_flow(snippet.replace(exst_tag,'\index{'+w_entry+'}'), ipropwin)
+                                        
+                                    else:
+                                        cwin_flow(snippet.replace(w, w+'\index{'+w_entry+'}'), ipropwin)
+                                        
+                                    ipropwin.refresh()
+                                                        
+                                if c == ord('a'):
+                                    tf[i] = tf[i].replace(w, w+'\index{'+w_entry+'}')
+                                    break
+                                    
+                                if c == ord('k'):
+                                    break
+                                    
+                    #back-up the old file
+                    if not os.path.exists(t+".bu"):
+                        try:
+                            subprocess.call("cp "+t.split(':', 1)[0]+" "+t.split(':', 1)[0]+".bu", 
+                                                            shell="True")
+                        except:
+                            pass
+                                    
+                    with open(t.split(':', 1)[0], 'w') as tfileout:
+                        tfileout.writelines(tf)
+                    
+                
+                bwin.erase()
+                bwin.refresh()
+                break             
+                
+
+    with open(idx_wrds_path, 'w') as idx_wrds_file:
+        idx_wrds_file.writelines(idx_wrds_new)
+    #with open(idx_wrds_path+".later.txt", 'a') as idx_wrds_file:
+    #    idx_wrds_file.writelines(idx_wrds_later)
+
+    
+#See if we're running Windoze and, if so, issue a warning.
+if sys.platform == 'win32':
+    print "WARNING:  This program is untested--and most likely doesn't work--"
+    print "\ton Windows.  If you would like to help add Windows" 
+    print "\tcompatibility please get in touch with Kevin."
+    
+#process command line options
+a = sys.argv
+
+if len(a) > 1:
+    if a[1] in ['help', '-h', '--help']:
+        print "Indexmeister v0.33 - Interactive Indexer"
+        print "Copyright 2015-2018 by Kevin A. Straight <longhunt@yahoo.com>"
+        print "under the terms of the GNU Public License."
+        print
+        print "Usage:", a[0], "[text file]"
+        print "where [text file] is a list of possible index terms, one per line."
+        print
+        print "Invoke without any arguments to enter an interactive menu to"
+        print "index LaTex files."
+        print 
+        
+        quit()
+    else:
+        idx_wrds_path = a[1]
+else:
+    print "Indexmeister v0.33 - Interactive Indexer"
+    print "Copyright 2015-2018 by Kevin A. Straight <longhunt@yahoo.com>"
+    print "under the terms of the GNU Public License."
+    print
+    print "i - input a list if (i)ndex terms as a text file"
+    print "s - (s)can a LaTex file for suggested index terms"
+    print "q - (q)uit"
+    c = ' '
+    while c not in ['i','s','q']:
+        c = raw_input('>').replace('\n', '')
+        
+    if c == 'q':
+        quit()
+        
+    if c =='i':
+        idx_wrds_path = raw_input('File name> ').replace('\n', '')
+        
+    if c == 's':
+        texfile = raw_input('File name> ').replace('\n', '')
+        print 
+        print 'Capitalized phrases (i.e. proper nouns) will authomatically be detected.'
+        print "Do you also want to scan for terms that don't occur in the system dictionary"
+        print "(e.g. foreign and scientific words)?"
+        dopt = raw_input("(y/N) >").replace('\n', '')
+        print "Do you also want to try to find words based on word frequency analysis?"
+        fopt = raw_input("(y/N) >").replace('\n', '')
+        
+        optionstr = ' '
+        if dopt in ['y', 'Y']:  optionstr = optionstr+'-d'
+        if fopt in ['y', 'Y']:  optionstr = optionstr+'f'
+
+        
+        try:
+            subprocess.call(['indexmeister '+texfile+optionstr+'> im_termlist.txt'], 
+                        shell=True)
+        except:
+            try:
+                subprocess.call(['./indexmeister '+texfile+optionstr+'> im_termlist.txt'], 
+                        shell=True)
+            except:
+                print "ERROR: Could not call indexmeister.  Please verify your installation."
+                quit()
+    
+        try:
+            wc_str = subprocess.check_output(['wc -l im_termlist.txt'], shell=True)
+            wc_str = wc_str[:string.find(wc_str, ' ')]
+            print wc_str, 'possible terms found.'
+            
+            if int(wc_str) < 1:
+                print "ERROR:  No index terms found in this file."
+                quit()
+
+        except:
+            pass
+    
+        print "List of terms saved as im_termlist.txt"
+        idx_wrds_path = 'im_termlist.txt'
+    
+    
+curses.wrapper(main_script)

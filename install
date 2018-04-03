@@ -1,0 +1,180 @@
+#! /usr/bin/env python2
+
+# This script installs the files for Indexmeister and Imbrowse.in 
+# locations for a 'typical' (i.e. GNU Debian based) Linux setup.  You might
+# need to adjust it slightly for your system
+#
+#echo Copying executables to /usr/local/bin
+#cp imbrowse /usr/local/bin
+#chmod o+x /usr/local/bin/imbrowse
+#cp indexmeister /usr/local/bin
+#chmod o+x /usr/local/bin/indexmeister
+#cp imhier /usr/local/bin
+#chmod o+x /usr/local/bin/imhier
+
+#echo Copying man pages to /usr/share/man
+#cp indexmeister.1.gz /usr/share/man/man1
+#cp imbrowse.1.gz /usr/share/man/man1
+
+import sys, os, subprocess, shutil, os.path, string, platform, stat
+
+def p_wrap(pstring):
+    ''' Prints a string with word-wrap to terminal column size '''
+
+    try:
+        a = term_cols
+    except:
+        try:
+            with os.popen("echo $COLUMNS") as b: 
+                term_cols = int(b.read())
+        except: 
+            term_cols = 40      # there aren`t that many 40-col CRTs around 
+                                # these days but terminals on mobile devices
+                                # can be pretty narrow, so this seems like a 
+                                # reasonable default 
+
+    while len(pstring) > term_cols:
+        print (pstring[:pstring[:term_cols].rfind(" ")])
+        pstring = pstring[len(pstring[:pstring[:term_cols].rfind(" ")]):]
+
+    print pstring
+
+
+def make_executable(path):
+    ''' This is from StackOverflow user Jonathon Reinhart ''' 
+
+    mode = os.stat(path).st_mode
+    mode |= (mode & 0o444) >> 2    # copy R bits to X
+    os.chmod(path, mode)
+
+
+p_wrap ("Installing the Indexmeister suite.")
+p_wrap ("NOTE: If this script fails check to make sure you are Root.")
+
+
+#Try to figure out what kind of system this is
+
+termux = False
+if "termux" in sys.prefix:
+    p_wrap ("I think this is an Android/Termux system. " +
+                "People who run console apps on a mobile OS " +
+                "are awesome." )
+    termux = True
+
+elif "win32" in sys.platform:
+    p_wrap ("This seems to be a Windows system.  I'll try to " + 
+                "install anyway, but it probably won't work. " +
+                "Consider upgrading to a modern, POSIX complient OS.")
+
+elif "linux" in sys.platform:
+    p_wrap ("This seems to be a Linux system " + "(" + string.join(platform.linux_distribution())  
+            + ").  Penguin Power!")
+    linux = True
+
+else:
+    p_wrap ("'" + sys.platform +"' system detected. This install script " + 
+                "hasn't really been tested on your system, but let's go " +
+                "ahead and try anyway.")
+
+# Now see if the dependencies are present
+
+p_wrap ("Checking for some required dependencies.")
+
+abort_flag = False
+
+try:
+    import curses
+
+except:
+    p_wrap ("WARNING: The Python 'curses' library doesn't seem to be installed.  You " +
+           "won't be able to run imbrowse until you install it. The other programs " +
+           "should still work.")
+           
+if subprocess.call("grep hoser < /dev/null", shell=True) != 1:
+    p_wrap ("WARNING: grep doesn't seem to be installed on this system.  You " +
+           "won't be able to run imbrowse until you install it. The other programs " +
+           "should still work.")
+    if termux:  p_wrap ('On termux the command "pkg install grep" should do the trick.') 
+
+#aspell / hunspell
+
+if subprocess.call("aspell list < /dev/null", 
+        shell=True) != 0 and subprocess.call(
+        "hunspell -l < /dev/null", shell=True) != 0:
+        
+    p_wrap ("I can't find aspell nor hunspell on your machine. " +
+            "unfortunately, indexmeister needs at least one of these to run.")
+
+    if termux: p_wrap ('On termux the command "pkg install hunspell" should do the trick.')
+            
+    abort_flag = True
+    
+
+#detex / pandoc
+if subprocess.call("pandoc < /dev/null", 
+        shell=True) != 0 and subprocess.call("detex < /dev/null",
+        shell=True) != 0:
+
+    p_wrap ("I can't find pandoc nor detex on your machine. " +
+            "unfortunately, indexmeister needs at least one of these to run.")
+
+    if termux:
+        p_wrap ('On termux the easiest way to get detex is usually to install the texlive' +
+                ' packages: "pkg install texlive*"') 
+            
+    abort_flag = True
+        
+          
+if abort_flag:
+    p_wrap ("Installation aborted because some required dependencies are not present.")
+    quit()
+
+# OK, now on to the actual installation
+
+# Try to find the important directories
+
+tree = [t for t in os.walk(sys.prefix)]
+
+manpath = [t[0] for t in tree if 'man' in t[1]][0]+"/man/"
+
+if termux:
+    execpath = sys.prefix + '/bin/'
+else:
+    if os.path.exists("/usr/local/bin/"):
+        execpath = "/usr/local/bin/"
+    elif os.path.exists("/usr/bin"):
+        execpath = "/usr/bin/"
+    else:
+        execpath = sys.prefix + '/bin/'
+    
+
+#copy the files over
+
+p_wrap("Attempting to copy executable scripts to " + execpath)
+
+try:
+    shutil.copy("./imbrowse", execpath+"imbrowse")
+    make_executable(execpath+"imbrowse")
+    shutil.copy("./indexmeister", execpath+"indexmeister")
+    make_executable(execpath+"indexmeister")
+    shutil.copy("./imhier", execpath+"imhier")
+    make_executable(execpath+"imhier")
+
+except:
+    p_wrap ("It lookes like something went wrong.  You will probably need" +
+            " to install the scripts by hand.")
+
+
+p_wrap("Attempting to copy man pages to " + manpath + "man1/")
+
+try:
+    shutil.copy("./indexmeister.1.gz", manpath+ "/man1/")
+    shutil.copy("./imbrowse.1.gz", manpath+ "/man1/")
+
+except:
+    p_wrap ("It lookes like something went wrong.  You will probably need" +
+            " to install the man pages by hand.")
+
+
+    
+    

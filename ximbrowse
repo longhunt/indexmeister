@@ -1,0 +1,202 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+'''Utility to interactively index Latex books (GUI version)
+   Copyright 2015-2016 by Kevin A. Straight <longhunt@yahoo.com> under 
+   the terms of the GNU public license.'''
+
+
+from Tkinter import *
+from tkMessageBox import showinfo
+import tkFileDialog
+import subprocess
+import time
+
+working_tex_glob = "*.tex"  #work on all tex files in current directory
+                            #until they specify differently
+                            
+                            #acually, this shul conist of the file they
+                            #scanned + any linked files (FIX ME!)
+
+def show_occurences(event):
+    current_term = lb_1.get(int(lb_1.curselection()[0]))
+    label_1["text"] = current_term
+    
+    try:
+       
+        
+        p=subprocess.check_output(['fgrep -H "'+current_term.replace(
+                            "\n", '')+'" '+working_tex_glob], shell=True)
+    
+        o = p.count(".tex:")
+        label_2["text"] = str(o) + " Occurences"
+        
+        if o > 0:
+            text_1.insert(1.0, "\n"+"-"*30+"\n\n")
+
+        text_1.insert(4.0, p)    #FIX ME: add color-coding later
+        
+                    
+        
+        
+        
+    except:
+        label_2["text"] = "0 Occurences"
+        
+        
+    
+    ''' broken
+    #make file names blue
+    j=p.find("\n")
+    text_1.tag_add("bluetext", "1.0", "1."+str(j))
+    text_1.tag_config("bluetext", foreground="blue")
+    for i in range(1,o):
+        print (i,0), (i,p.find(".tex:", j))
+        text_1.tag_add("bluetext", str(i)+".0", str(i)+"."+str(p.find(".tex:", j)))
+        j=p.find("\n", j)
+    '''    
+
+def scan_for_terms():
+    '''Runs indexmeister to find index terms on a file'''
+    
+    
+    #Set up an "open file" dialog box
+    open_fdia1 = tkFileDialog.Open()
+    f = open_fdia1.show(filetypes = [('LaTex', '*.tex'), ('plain text', '*.txt'),
+                                     ( 'all files', '*.*')])
+                                     
+    #now pop a dialog for indexmeister options
+    imo = Toplevel()
+    imo.title("Options")
+    
+    lab1_imo = Label(imo,text="Options for Scanning File")
+
+    lab1_imo.grid(row=1,column=1,columnspan=2)
+    lab2_imo = Label(imo,text="Capitalized phrases that do not begin a sentence",
+                    anchor=W)
+    lab2_imo.grid(row=2,column=1)
+    cb1_imo = Checkbutton(imo, state=DISABLED)
+    cb1_imo.toggle()
+    cb1_imo.grid(row=2,column=2)
+
+    lab3_imo = Label(imo,text="Phrases inside \\emph{} tags",
+                    anchor=W)
+    imo_e = IntVar()
+    lab3_imo.grid(row=3,column=1)
+    cb2_imo = Checkbutton(imo, variable=imo_e)
+    cb2_imo.grid(row=3,column=2)
+    
+    lab4_imo = Label(imo,text="Words that aren't in the system dictionary",
+                    anchor=W)
+    imo_d = IntVar()
+    lab4_imo.grid(row=4,column=1)
+    cb3_imo = Checkbutton(imo, variable=imo_d)
+    cb3_imo.grid(row=4,column=2)
+
+    lab5_imo = Label(imo,text="Words based on frequency analysis",
+                    anchor=W)
+    imo_f = IntVar()
+    lab5_imo.grid(row=5,column=1)
+    cb4_imo = Checkbutton(imo, variable=imo_f)
+    cb4_imo.grid(row=5,column=2)
+    
+    def scan_now():
+        optionstr = " "
+        if imo_d.get():
+            optionstr = optionstr + "d"
+        if not imo_e.get():
+            optionstr = optionstr + "E"
+        if imo_f.get():
+            optionstr = optionstr + "f"
+        
+        
+        active_terms = ""
+            
+        try:
+            active_terms = subprocess.check_output(['indexmeister '+f+optionstr], 
+                        shell=True)
+        except:
+            try:
+                subprocess.call(['./indexmeister '+texfile+optionstr+'> im_termlist.txt'], 
+                        shell=True)
+            except:
+                print "ERROR: Could not call indexmeister.  Please verify your installation."
+                showerror(title="Error", message="Could not call indexmeister.  Please verify your installation.")
+                
+        aterms.set(active_terms)
+                
+    
+    b1_imo = Button(imo,text="Scan", command=scan_now)
+    b1_imo.grid(row=6,column=1)
+    b2_imo = Button(imo, text="Cancel", command=imo.destroy)
+    b2_imo.grid(row=6,column=2)
+
+
+def about_box():
+    showinfo(title="About", message="Indexmeister 0.321\n\nCopyright 2015-2016"+
+        "\nby Kevin A. Straight\nunder the terms of the GNU Public License."+
+        "\n\nhttp://www.kevinastraight.com")
+
+def load_terms():
+    '''loads a previously generated terms list'''
+   
+    #Set up an "open file" dialog box
+    open_fdia1 = tkFileDialog.Open()
+    f = open_fdia1.show(filetypes = [('plain text', '*.txt'),
+                                     ( 'all files', '*.*')])
+                                     
+    with open(f, 'r') as term_file:
+        terms = term_file.readlines()
+        active_terms = ""
+        for a in terms:
+            active_terms = active_terms+a.strip()+"\n"
+        aterms.set(active_terms)
+
+#Set up top-level GUI Window
+win = Tk()
+win.title("Indexmeister 0.321")
+
+menubar = Menu(win)
+filemenu = Menu(menubar)
+filemenu.add_command(label="Scan LaTex file", command=scan_for_terms)
+filemenu.add_command(label="Open terms list", command=load_terms)
+filemenu.add_command(label="Save changes", state=DISABLED)
+filemenu.add_command(label="Revert", state=DISABLED)
+filemenu.add_command(label="Quit", state=DISABLED)
+menubar.add_cascade(label="File", menu=filemenu)
+
+helpmenu = Menu(menubar)
+helpmenu.add_command(label="About", command=about_box)
+menubar.add_cascade(label="Help", menu=helpmenu)
+
+win.config(menu=menubar)
+
+aterms = StringVar()
+lb_1 = Listbox(win, listvariable=aterms, height=24, selectmode=SINGLE)
+lb_1.grid(row=1,column=1,rowspan=3)
+lb_1.bind('<<ListboxSelect>>', show_occurences)
+
+
+label_1 = Label(win, text="index term")
+label_1.grid(row=1,column=2)
+
+
+label_2 = Label(win, text="Occurences:")
+label_2.grid(row=2,column=2)
+
+text_1 = Text(win)
+text_1.grid(row=3,column=2, columnspan=2)
+
+b_1 = Button(win, text='Index this term', state=DISABLED)
+b_1.grid(row=4,column=2)
+
+b_2 = Button(win, text="Delete term from list", state=DISABLED)
+b_2.grid(row=4,column=3)
+
+
+showinfo(title="Notice", message="This will eventually be a GUI frontend for IMBrowse. "+
+         "at present it does very little and is included only to ellicit user comments. " +
+         "Please use the CURSES version (imbrowse) for now.")
+
+win.mainloop()
+
