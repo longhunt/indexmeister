@@ -4,17 +4,6 @@
 # locations for a 'typical' (i.e. GNU Debian based) Linux setup.  You might
 # need to adjust it slightly for your system
 #
-#echo Copying executables to /usr/local/bin
-#cp imbrowse /usr/local/bin
-#chmod o+x /usr/local/bin/imbrowse
-#cp indexmeister /usr/local/bin
-#chmod o+x /usr/local/bin/indexmeister
-#cp imhier /usr/local/bin
-#chmod o+x /usr/local/bin/imhier
-
-#echo Copying man pages to /usr/share/man
-#cp indexmeister.1.gz /usr/share/man/man1
-#cp imbrowse.1.gz /usr/share/man/man1
 
 import sys, os, subprocess, shutil, os.path, string, platform, stat
 
@@ -135,7 +124,19 @@ if abort_flag:
 
 tree = [t for t in os.walk(sys.prefix)]
 
-manpath = [t[0] for t in tree if 'man' in t[1]][0]+"/man/"
+manpath = ""
+#this works on most debian derivatives and some others
+with os.popen("manpath") as b: 
+    manpath = b.read().strip()
+    manpaths = manpath.split(os.path.pathsep)
+    for m in manpaths:
+        if os.path.exists(m+"/man1"):
+            manpath = m
+        
+#but if there's no 'manpath' just  guess
+if manpath == "":
+    manpath = sys.prefix + "/share/man/"
+
 
 if termux:
     execpath = sys.prefix + '/bin/'
