@@ -79,14 +79,17 @@ except:
            "won't be able to run imbrowse until you install it. The other programs " +
            "should still work.")
            
+'''  #Shouldn't need grep anymore
 if subprocess.call("grep hoser < /dev/null", shell=True) != 1:
     p_wrap ("WARNING: grep doesn't seem to be installed on this system.  You " +
            "won't be able to run imbrowse until you install it. The other programs " +
            "should still work.")
     if termux:  p_wrap ('On termux the command "pkg install grep" should do the trick.') 
+'''
 
 #aspell / hunspell
 
+print "Checking for aspell and/or hunspell..."
 if subprocess.call("aspell list < /dev/null", 
         shell=True) != 0 and subprocess.call(
         "hunspell -l < /dev/null", shell=True) != 0:
@@ -100,16 +103,19 @@ if subprocess.call("aspell list < /dev/null",
     
 
 #detex / pandoc
+print "Checking for pandoc and/or detex..."
 if subprocess.call("pandoc < /dev/null", 
         shell=True) != 0 and subprocess.call("detex < /dev/null",
         shell=True) != 0:
 
     p_wrap ("I can't find pandoc nor detex on your machine. " +
-            "unfortunately, indexmeister needs at least one of these to run.")
+            "unfortunately, indexmeister needs at least one of these to run. " + 
+            "Detex is included with texlive and many other LaTex distributions. " + 
+            "Pandoc (prefered) is available as a package on most Linux distributions.")
 
     if termux:
         p_wrap ('On termux the easiest way to get detex is usually to install the texlive' +
-                ' packages: "pkg install texlive*"') 
+                ' package: "pkg install texlive*"') 
             
     abort_flag = True
         
@@ -161,6 +167,7 @@ try:
     shutil.copy("./imhier", execpath+"imhier")
     make_executable(execpath+"imhier")
 
+    p_wrap("Success!") 
 except:
     p_wrap ("It lookes like something went wrong.  You will probably need" +
             " to install the scripts by hand.")
@@ -171,6 +178,8 @@ p_wrap("Attempting to copy man pages to " + manpath + "man1/")
 try:
     shutil.copy("./indexmeister.1.gz", manpath+ "/man1/")
     shutil.copy("./imbrowse.1.gz", manpath+ "/man1/")
+
+    p_wrap("Success!") 
 
 except:
     p_wrap ("It lookes like something went wrong.  You will probably need" +

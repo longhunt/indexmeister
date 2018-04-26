@@ -8,7 +8,7 @@ Installation:
 
 Just copy the Python scripts "indexmeister" and "imbrowse" anywhere on 
 your path and make them executable, then copy the man pages onto your man 
-path.  You can run the script "install" on Debian based (and proabably
+path.  You can run the script "install" on Debian based (and probably
 most other) systems to do this automatically.
 
 
@@ -21,27 +21,37 @@ http://www.kevinastraight.com
 
 Changelog:
 
+?.??    Imbrowse: replaced or refactored abour 90% of the code;
+        it should be significantly more stable and easier to
+        maintain now.  Replaced external use of grep with an
+        internal subroutine.  Colorized  UI.  Significantly
+        improved "rollback" when user abandons changes.  Other
+        minor UI tweaks.  Installer: minor changes---we don't
+        need to check for grep anymore.  Documentation: 
+        revised both man pages.  Added "Indexing Theory" and
+        "History" sections to indexmeister man page.
+
 0.33	Fixed a bug by which imbrowse created spurious files.
         Imbrowse can now scan sub-folders for .tex files.
         Indexmeister will now use hunspell if aspell isn't
-		available.  Indexmeister has now been tested on
-		Android w/ Termux.  Rewrote the install script in
-		Python and made it considerably smarter. Merged in 
-		some older changes that had accidently dropped out in 
-		version 0.32.
+        available.  Indexmeister has now been tested on
+        Android w/ Termux.  Rewrote the install script in
+        Python and made it considerably smarter. Merged in 
+        some older changes that had accidentally dropped out in 
+        version 0.32.
 
-0.321   Inedxmeister: Added logic to add words emphasized in LaTex by
+0.321   Indexmeister: Added logic to add words emphasized in LaTex by
         default.  Imbrowse: Now fails gracefully if the python-curses
-        package is not installed.  Added a simple scipt (imhier) to list
+        package is not installed.  Added a simple script (imhier) to list
         all index tags currently used in a LaTex document (up to 3 
         levels deep).  Began blocking out a TK-based GUI for the 
         programs (it doesn't do much yet).   
 
 0.32    Indexmeister:  Fixed a bug where Indexmeister returned plain 
-        text instead of unicode characters when used with Pandoc 
-        backend.  Improved unicode support in general.  Changed 
+        text instead of Unicode characters when used with Pandoc 
+        back-end.  Improved Unicode support in general.  Changed 
         punctuation-parsing logic.  Added a rule to exclude all-caps
-        sections of a file.  Imbrowse: Fixed bug where unicode
+        sections of a file.  Imbrowse: Fixed bug where Unicode
         characters were not displaying on the home screen.  Other minor
         bug fixes.
 
@@ -53,34 +63,34 @@ Changelog:
         
 Bug Reports and How to Help Out:
 
-This is a pre-Beta release so there are probably still a few issues.  I 
-am particularly interested to know which systems the programs run on and 
+This is a pre-Beta release so there are still many issues.  I am 
+particularly interested to know which systems the programs run on and 
 what you did to make them work.  Feel free to email me at 
 <longhunt@yahoo.com> with any comments or suggestions.
 
 If need help getting the programs to run on your system, feel free to
 email me.  Do please keep the following in mind, however:
 
-	1)	This is free software with no support.  I will usually try to 
+	1)  This is free software with no support.  I will usually try to 
 		help you if I can, but I make no promises.
 
-	2)	I don't actually have internet out at my place, and only check
+	2)  I don't actually have internet out at my place, and only check
 		email on the days I walk into town to use the library.  That 
 		doesn't happen every week, so please be patient.  
 
-	3)  A corrolary to the above is that you should probably include
+	3)  A corollary to the above is that you should probably include
 		as much information as possible in the first email that you send
 		me, so we don't need to go back and forth as many times.  At the
-		minimum, any useful bug report should include:  sytem type--e.g.
-		"Linux", "Android", "MacOS", etc.  distribution and version--e.g.
-		"Debian 8", "Snow Leopard", "Android Marshmellow", etc.  
+		minimum, any useful bug report should include:  system type--e.g.
+		"Linux", "Android", "Mac OS", etc.  distribution and version--e.g.
+		"Debian 8", "Snow Leopard", "Android Marshmallow", etc.  
 		System architecture--e.g. "AMD64", "PPC", "ARM", etc.  Whether 
 		you have the following programs installed, and the versions:  
-		detex, pandoc, aspell, hunspell, iconv, grep, python2.    I realize 
-		that you may not know all of the above, but the more information 
-		you give me, the better.  Screen dumps of error messages are also 
-		good.  You can also zip up the whole folder and send it to me 
-		so I can try to reproduce the problem.
+		detex, pandoc, aspell, hunspell, python2.    I realize that you 
+		may not know all of the above, but the more information you give 
+		me, the better.  Screen dumps of error messages are also good.  
+		You can also zip up the whole folder and send it to me so I can 
+		try to reproduce the problem.
 
 	4)  If you are a grad student, the week before your thesis is due
 		is a bad time to be installing pre-alpha software and trying 

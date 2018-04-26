@@ -3,10 +3,10 @@
 
 
 '''Utility to help index Latex books by suggesting possible index terms.
-   Copyright 2015 by Kevin A. Straight <longhunt@yahoo.com> under the
+   Copyright 2015-2018 by Kevin A. Straight <longhunt@yahoo.com> under the
    terms of the GNU public license.'''
    
-
+VERSION_CODE = "0.40"       #current version of indexmeister
 
 import string, subprocess, sys, os
 
@@ -117,8 +117,8 @@ if not usePandoc:
 #process command line options
 a = sys.argv
 if len(a)<2:
-    print "Indexmeister v0.33"
-    print "Copyright 2015 by Kevin A. Straight <longhunt@yahoo.com>"
+    print "Indexmeister v"+VERSION_CODE
+    print "Copyright 2015-2018 by Kevin A. Straight <longhunt@yahoo.com>"
     print "under the terms of the GNU Public License"
     print "Usage:  "+a[0]+" filename.tex [options]"
     print
