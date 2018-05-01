@@ -21,13 +21,14 @@ http://www.kevinastraight.com
 
 Changelog:
 
-?.??    Imbrowse: replaced or refactored abour 90% of the code;
+0.40    Imbrowse: replaced or refactored abour 90% of the code;
         it should be significantly more stable and easier to
         maintain now.  Replaced external use of grep with an
         internal subroutine.  Colorized  UI.  Significantly
         improved "rollback" when user abandons changes.  Other
-        minor UI tweaks.  Installer: minor changes---we don't
-        need to check for grep anymore.  Documentation: 
+        minor UI tweaks.  Added command to invoke Nano from
+        inside the indexing loop. Installer: minor changes---
+        we don't need to check for grep anymore.  Documentation: 
         revised both man pages.  Added "Indexing Theory" and
         "History" sections to indexmeister man page.
 

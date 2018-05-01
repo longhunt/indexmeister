@@ -6,7 +6,10 @@
 
 VERSION_CODE = "0.40"       #current version of imbrowse
 
-import string, subprocess, sys, os
+import string
+import subprocess
+import sys
+import os
 
 
 #OpenSUSE and some others do not install the curses library by default
@@ -29,7 +32,7 @@ def file_copy(f_from, f_to):
         we have to do this instead of just calling shutil.copy() because Android
         doesn't always let you change/copy file permissions '''
 
-    assert f_from <> f_to
+    assert f_from != f_to
 
     with open(f_from, "r") as f1:
         with open(f_to, "w") as f2:
@@ -38,7 +41,7 @@ def file_copy(f_from, f_to):
 
 def log_d (string):
     ''' Just a logger for debugging. '''
-    
+
     with open("imbrowse.log", "a") as log:
         log.write(str(string)+"\n")
 
@@ -90,7 +93,7 @@ def grep(file_pat, search_pat, recurse=True, max_len=80, exclude=None):
 
                 for line in buff:
                     if search_pat.lower() in line.lower():
-                        if exclude <> None:
+                        if exclude != None:
                             if not (exclude.lower() in line.lower()):
                                 return_list.append((s_file, line[:max_len]))
                         else:
@@ -122,7 +125,7 @@ def cwin_flow(tstring, win, hilight="-1", w=None):
     for i in range(rows-1):
         win.addstr(i,0,tstring[i*cols:i*cols+cols])
 
-    if hilight <> -1 and w <> None:
+    if hilight != -1 and w != None:
         curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
         h0 = hilight - offset
         try:
@@ -144,19 +147,17 @@ def i_write_changes(t, tf):
 def detex(a, tag):
     '''removes a given LaTex tag and its contents from a string'''
 
-    import string
-
     if tag == "glossary":
         if a.find("\\glossary") == -1:
             return a
-    
-        while a.find("\\glossary") <> -1:
+
+        while a.find("\\glossary") != -1:
             b, c  = a.split("\\glossary", 1)
             a = b + string.join(c.split("}",2)[2:], " ").replace("{", "")
-            
+
     return a
 
-    
+
 def occurences(w, i, idx_wrds, stdscr):
     '''find all the occurences of a word, but ignore any that are inside a '\glossary{}' tag'''
     oc  = grep("*.tex", w, max_len=255, exclude=w+"\\index")
@@ -166,7 +167,7 @@ def occurences(w, i, idx_wrds, stdscr):
     return oc
 
 
-def index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i):
+def index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i, cursor=0):
     ''' for the current term, goes to each occurance in the .tex files and asks if they
         want to inset an index tag.  '''
 
@@ -180,6 +181,7 @@ def index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i):
     iwin.addstr("s(k)ip", curses.A_REVERSE); iwin.addstr("  ")
     iwin.addstr("(c)hange index entry", curses.A_REVERSE); iwin.addstr("  ")
     iwin.addstr("back to (m)enu", curses.A_REVERSE)
+    iwin.addstr(14, (cols-2)/2-8, "(o)pen in editor", curses.A_REVERSE)
 
     iwin.refresh()
 
@@ -191,47 +193,48 @@ def index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i):
 
     tfiles = unique([X[0] for X in occurences(w, i, idx_wrds, stdscr)])
 
-    for t in tfiles: 
+    for t in tfiles:
 
         iwin.insstr(1,50, t.rjust(max([20,cols-53])), curses.color_pair(3))
         iwin.refresh()
 
-        cursor = 0
         snippet_s = 0
         snippet_e = 0
 
         tf_buff = " "                   #init this in case the file IO chokes
         with open(t, 'r') as tf_in:
             tf_buff = tf_in.read()
-
-        cursor = tf_buff.lower().find(w.lower())     #FIXME make this skip existing \index tags
+        if cursor == 0:
+            cursor = tf_buff.lower().find(w.lower())
         if tf_buff.lower()[cursor:].startswith(w.lower()+"\\index"):
             cursor = 1+tf_buff.find("}", cursor)
             cursor = tf_buff.lower().find(w.lower(), cursor)
 
-        while cursor <> -1:
+
+        while cursor != -1:
 
             snippet_s = max(0, cursor - (snip_bytes + len(w))/2)
             snippet_e = min(len(tf_buff)-1, cursor + (snip_bytes + len(w))/2)
 
             snippet = tf_buff[snippet_s: snippet_e]
-            hilight = snippet.lower().find(w.lower())
-            while "\\glossary" in snippet[max(hilight-12, 0):hilight]:
-                hilight = snippet.lower.find(w.lower(), hilight + 1)
+            hilight = cursor - snippet_s
             cwin_flow(snippet, ioldwin, hilight=hilight, w=w)
 
             new_snippet = tf_buff[snippet_s: cursor+len(w)] + "\\index{" + w_entry + "}"
             new_snippet += tf_buff[cursor+len(w):snippet_e]
-            cwin_flow(new_snippet, ipropwin, hilight=hilight, w=(w+"\\index{"+w_entry+"}")) 
+            cwin_flow(new_snippet, ipropwin, hilight=hilight, w=(w+"\\index{"+w_entry+"}"))
 
             ioldwin.refresh()
             ipropwin.refresh()
 
+
+
             while True:
                 c = ioldwin.getch()
-                
+
                 # Change the entry for the index
                 if c == ord('c'):
+
                     cwin = curses.newwin(4, cols-2, 8, 1)
                     cwin.addstr(2,2,"New entry: ")
                     cwin.refresh()
@@ -245,33 +248,41 @@ def index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i):
                     cwin.refresh()
                     fwin.addstr(2,2,"Index entry: "+w_entry.strip())
 
-                    index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i)
+                    w_entry = index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i, cursor=cursor)
 
                     break
 
                 # Accept the tag for this occurence
                 if c == ord('a'):
-                    tf_buff = tf_buff.replace(snippet, new_snippet)
 
-                    cursor = tf_buff.lower().find(w.lower(), cursor+len(w+"\\index{"+w_entry+"}"))
+                    tf_buff = tf_buff[:snippet_s] + new_snippet + tf_buff[snippet_e:]
+                    cursor += (len(new_snippet) - len(snippet))
+                    cursor = tf_buff.lower().find(w.lower(), cursor+1)
                     while "\\glossary" in tf_buff[cursor-12:cursor]:
                         cursor = tf_buff.lower().find(w.lower(), cursor+1)
 
+                    while tf_buff.lower()[cursor:].startswith(w.lower()+"\\index"):
+                        cursor = 1+tf_buff.find("}", cursor)
+                        cursor = tf_buff.lower().find(w.lower(), cursor)
+
+
                     break
-                    
+
                 # Skip this occurance
                 if c == ord('k'):
+
                     cursor = tf_buff.lower().find(w.lower(), cursor+1)
                     if cursor == -1:
                         break
                     while "\\glossary" in tf_buff[cursor-12:cursor]:
                         cursor = tf_buff.lower().find(w.lower(), cursor+1)
 
-                    if tf_buff.lower()[cursor:].startswith(w.lower()+"\\index"):
+                    while tf_buff.lower()[cursor:].startswith(w.lower()+"\\index"):
                         cursor = 1+tf_buff.find("}", cursor)
                         cursor = tf_buff.lower().find(w.lower(), cursor)
 
-                        break
+
+                    break
 
                 # Go back up to the main menu
                 if c == ord('m'):
@@ -284,11 +295,37 @@ def index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i):
 
                     break
 
-    i_write_changes(t, tf_buff)     
+                # Open in editor
+                if c == ord('o'):
 
+                    #Figure out what line of the buffer we're on
+                    edit_line = len(tf_buff[:cursor].splitlines())
 
+                    i_write_changes(t, tf_buff)
+                    result = subprocess.call("nano +"+str(edit_line)+" "+t, shell=True)  #FIXME - let them specify editor in a 
+                                                                                         # config file
+                                                                                        # FIXME - exception handle this
 
-            
+                    curses.noecho()
+
+                    stdscr.clear()
+
+                    header_str = '>>>  INDEXMEISTER BROWSER v'+VERSION_CODE+'  <<<'
+                    curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLUE) 
+                    stdscr.addstr(0, (cols-len(header_str))/2, header_str, curses.color_pair(1) | curses.A_BOLD)
+
+                    curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
+                    stdscr.addstr(0,0,str(i+1)+" / "+str(len(idx_wrds)), curses.color_pair(3))
+
+                    stdscr.refresh()
+
+                    w_entry = index_the_term(stdscr, fwin,  idx_wrds, w, w_entry, i, cursor=cursor)
+
+                    break
+
+    i_write_changes(t, tf_buff)
+
+    return w_entry
 
 
 def top_menu(i, stdscr, idx_wrds, w_entry=""):
@@ -308,18 +345,16 @@ def top_menu(i, stdscr, idx_wrds, w_entry=""):
     curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
     stdscr.addstr(0,0,str(i+1)+" / "+str(len(idx_wrds)), curses.color_pair(3))
 
-
     bwin = curses.newwin(rows-2, cols, 1,0)
     curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_WHITE)
     bwin.bkgd('.', curses.color_pair(2))
     bwin.refresh()
 
-
     curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     fwin=curses.newwin(6,cols-2,2,1)
     fwin.addstr(1,2,"Suggested index term: "); fwin.addstr(w, curses.color_pair(4) | curses.A_BOLD)
     fwin.addstr(2,2,"Index entry: ") ; fwin.addstr(w_entry, curses.color_pair(4))
-    fwin.addstr(3,2,"(s)how occurences  (c)hange index entry  (d)elete  s(k)ip\n")      
+    fwin.addstr(3,2,"(s)how occurences  (c)hange index entry  (d)elete  s(k)ip\n")
     fwin.addstr(4,2,"(b)ack  (i)ndex  (q)uit and save progress  aba(n)don changes\n")
     curses.curs_set(0)
     bwin.refresh()
@@ -327,7 +362,7 @@ def top_menu(i, stdscr, idx_wrds, w_entry=""):
 
     while True:
         c = stdscr.getch()
-        
+
         # Show Occurances
         if c == ord('s'):
             stdscr.addstr('\r')
@@ -348,8 +383,9 @@ def top_menu(i, stdscr, idx_wrds, w_entry=""):
                 ww = cols-4-3-max_file_nm_len-20
                 gwin.insstr(idx, 4+max_file_nm_len, results[idx][1][:ww])
 
-                first_part = results[idx][1].find(w.replace("\n", ""))
-                gwin.addstr(idx, 4+max_file_nm_len+first_part, w.replace("\n", ""), curses.A_STANDOUT)
+                first_part = results[idx][1].lower().find(w.replace("\n", "").lower())
+                hi_lit_part = results[idx][1][first_part:first_part + len(w.replace("\n", ""))]
+                gwin.addstr(idx, 4+max_file_nm_len+first_part, hi_lit_part, curses.A_STANDOUT)
 
             gwin.refresh()
 
@@ -375,12 +411,12 @@ def top_menu(i, stdscr, idx_wrds, w_entry=""):
             break
 
 
-        # Delete this term 
+        # Delete this term
         if c == ord('d'):
             idx_wrds.remove(w+"\n")
 
             i = sur_terms(i, idx_wrds, stdscr)
-            i = top_menu(i, stdscr, idx_wrds, w_entry=w_entry)
+            i = top_menu(i, stdscr, idx_wrds)
 
             break
 
@@ -407,7 +443,7 @@ def top_menu(i, stdscr, idx_wrds, w_entry=""):
 
         # Skip to next term
         if c == ord('k'):
-            i+=1
+            i += 1
             if i > len(idx_wrds) - 1:
                 i = 0
 
@@ -418,7 +454,7 @@ def top_menu(i, stdscr, idx_wrds, w_entry=""):
 
         # Back to previous term
         if c ==ord('b'):
-            i-=1
+            i -= 1
             if i < 0:
                 i = len(idx_wrds) - 1
 
@@ -428,7 +464,7 @@ def top_menu(i, stdscr, idx_wrds, w_entry=""):
             break
 
         # Abandon changes and exit
-        if c == ord('n'):  
+        if c == ord('n'):
 
             if really_abandon(stdscr):
 
@@ -448,23 +484,19 @@ def top_menu(i, stdscr, idx_wrds, w_entry=""):
             else:
                 i = sur_terms(i, idx_wrds, stdscr)
                 i = top_menu(i, stdscr, idx_wrds)
-            
 
         # Index this term
         if c == ord('i'):
 
-            index_the_term(stdscr, fwin, idx_wrds, w, w_entry, i)
+            w_entry = index_the_term(stdscr, fwin, idx_wrds, w, w_entry, i)
 
             i = sur_terms(i, idx_wrds, stdscr)
             i = top_menu(i, stdscr, idx_wrds)
 
             break
-            
-
-                                
-                            
 
     return i
+
 
 def all_done(stdscr):
     ''' clean exit when we run out of terms '''
@@ -499,9 +531,8 @@ def really_abandon(stdscr):
         c = ad_win.getch()
         if c == ord('y') or c == ord('Y'):
             return True
-    
+
     return False
-    
 
 
 def sur_terms(i, idx_wrds, stdscr):
@@ -511,7 +542,10 @@ def sur_terms(i, idx_wrds, stdscr):
         all_done(stdscr)
 
     rows, cols = stdscr.getmaxyx()
+    if i > len(idx_wrds)-1:
+        i = len(idx_wrds)-1
     w = idx_wrds[i].replace("\n", "")
+
 
     oc = occurences(w, i, idx_wrds, stdscr)  # If we can't find any of this word then skip it
     # If nothing comes up it means we're done with this term
@@ -550,24 +584,24 @@ def sur_terms(i, idx_wrds, stdscr):
     else:
         nterms = idx_wrds[word_ind[0]][:-1]+" -- "+idx_wrds[i][:-1]+" -- "+idx_wrds[word_ind[2]][:-1]+" -- "+idx_wrds[word_ind[3]][:-1]
 
-    
-    #if this display string is too long then create a shorter one 
+    #if this display string is too long then create a shorter one
     if len(nterms) > cols-2:
         nterms = idx_wrds[word_ind[0]][:-1]+" -- "+idx_wrds[i][:-1]+" -- "+idx_wrds[word_ind[2]][:-1]
 
     while len(nterms) > cols-2:
-        if nterms.find("--") <> -1:
+        if nterms.find("--") != -1:
             x1 = nterms.find(" -- ")
             nterms = nterms[:x1-1]+nterms[x1:-1]
         else:
             nterms = nterms[:cols-2]
-        
+
     curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
 
     stdscr.addstr(rows-1,(cols-len(nterms))/2,nterms)
     stdscr.addstr(rows-1, (cols-len(nterms))/2+string.find(nterms,w), w, curses.A_BOLD | curses.color_pair(4))
 
     return i
+
 
 def main_script(args):
 
@@ -582,11 +616,10 @@ def main_script(args):
 
         except:
             pass
-            
+
     with open(idx_wrds_path, 'r') as idx_wrds_file:
         idx_wrds = idx_wrds_file.readlines()
-        
-        
+
     i = 0
     while True:
         i = sur_terms(i, idx_wrds, stdscr)

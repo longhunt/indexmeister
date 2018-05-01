@@ -6,11 +6,12 @@
     Copyright 2016 by Kevin A. Straight <longhunt@yahoo.com> under the
     terms of the GNU public license.'''
 
-import sys, glob    
-    
-#process command line options
+import sys
+import glob
+
+# process command line options
 a = sys.argv
-if len(a)<2:
+if len(a) < 2:
     print "IMHier  (part of the Indexmeister v0.321 suite)"
     print "Copyright 2015-2016 by Kevin A. Straight <longhunt@yahoo.com>"
     print "under the terms of the GNU Public License"
@@ -18,77 +19,74 @@ if len(a)<2:
     print ""
     print "Returns a list of currently used index terms in a Latex document."
     print "Note: Globing is supported for the filename."
-        
-        
+
 else:
-    
+
     raw_idx = []
 
     texfiles = glob.glob(a[1])
-    
-    
+
     for t in texfiles:
         with open(t, 'r') as T:
             tf = T.read()
-            
+
         i = 0
-        while i > -1:       #find other files linked to this one
-            i = tf.find("\input{",i) + 7
-            if i <> 6:
+        while i > -1:       # find other files linked to this one
+            i = tf.find("\input{", i) + 7
+            if i != 6:
                 j = tf.find("}", i)
                 w = tf[i:j]
                 if w not in texfiles:
                     texfiles.append(w)
-                
+
             else:
                 i = -1
-        
-    #print "texfiles:", texfiles
-    
+
+    # print "texfiles:", texfiles
+
     for t in texfiles:
         with open(t, 'r') as T:
             tf = T.read()
-            
+
         i = 0
-        while i > -1:       #find contents of all the index tags
-            i = tf.find("\index{",i) + 7
-            if i <> 6:
+        while i > -1:       # find contents of all the index tags
+            i = tf.find("\index{", i) + 7
+            if i != 6:
                 j = tf.find("}", i)
                 w = tf[i:j]
                 if w not in raw_idx:
                     raw_idx.append(w)
-                
+
             else:
                 i = -1
-                
-    #print "raw_idx:", raw_idx
-                
-    #use a nested dictionary to keep track of every term used
+
+    # print "raw_idx:", raw_idx
+
+    # use a nested dictionary to keep track of every term used
     final_idx = {}
     for entry in raw_idx:
-        i = entry.find("!") 
+        i = entry.find("!")
         j = entry.find("!", i+1)
-   
+
         if i == -1:
-            i = len(entry)    
+            i = len(entry)
         if entry[:i] not in final_idx:
             final_idx[entry[:i]] = {}
-        
+
         if j == -1:
             j = len(entry)
-        if i <> len(entry):
+        if i != len(entry):
             if entry[i+1:j] not in final_idx[entry[:i]]:
                 final_idx[entry[:i]][entry[i+1:j]] = {}
-        
-        if j <> len(entry):
+
+        if j != len(entry):
             if entry[j+1:] not in final_idx[entry[:i]][entry[i+1:j]]:
                 final_idx[entry[:i]][entry[i+1:j]][entry[j+1:]] = {}
 
-                    
-    #Now sort and print
+    # Now sort and print
     level1 = final_idx.keys()
     level1.sort()
-        
+
     for i in level1:
         print i
         level2 = final_idx[i].keys()
@@ -99,4 +97,3 @@ else:
             level3.sort()
             for k in level3:
                 print "-->", k
-        
